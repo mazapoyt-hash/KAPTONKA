@@ -1,0 +1,15 @@
+[
+  {
+    "id": "kyiv-support-001",
+    "name": "Назва перевіреної точки",
+    "city": "Київ",
+    "address": "Повна перевірена адреса",
+    "lat": 50.4501,
+    "lng": 30.5234,
+    "services": ["water", "charging", "toilet"],
+    "note": "Короткий опис умов доступу.",
+    "mapUrl": "https://www.google.com/maps/search/?api=1&query=50.4501,30.5234",
+    "contactUrl": "https://t.me/username",
+    "updatedAt": "2026-07-18T18:00:00+03:00"
+  }
+]
