@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">КАРТОНКА</title>
+  <rect width="256" height="256" rx="52" fill="#fffaf0"/>
+  <rect x="46" y="36" width="164" height="88" rx="18" fill="#ffbd16"/>
+  <path d="M111 124h34l-17 18z" fill="#ffbd16"/>
+  <rect x="121" y="128" width="14" height="72" rx="7" fill="#072b63"/>
+  <circle cx="76" cy="156" r="18" fill="#072b63"/>
+  <path d="M48 216c2-31 17-47 42-47 15 0 26-10 35-24 5-8 17-3 13 7-12 31-35 49-51 64z" fill="#072b63"/>
+  <circle cx="180" cy="156" r="18" fill="#ffbd16"/>
+  <path d="M208 216c-2-31-17-47-42-47-15 0-26-10-35-24-5-8-17-3-13 7 12 31 35 49 51 64z" fill="#ffbd16"/>
+</svg>
