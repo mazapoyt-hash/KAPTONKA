@@ -36,6 +36,7 @@ const root = document.querySelector('#main-content');
 const modalRoot = document.querySelector('#modal-root');
 const toastRoot = document.querySelector('#toast-root');
 const tg = window.Telegram?.WebApp;
+let generatedRequestText = '';
 
 init();
 
@@ -63,7 +64,7 @@ async function init() {
   }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=2.0.0').then((registration) => registration.update()).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=2.1.0').then((registration) => registration.update()).catch(console.error);
   }
 }
 
@@ -81,6 +82,13 @@ function setupTelegram() {
 
 function bindGlobalEvents() {
   document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+
+    if (event.target.classList.contains('modal-backdrop')) {
+      closeModal();
+      return;
+    }
+
     const target = event.target.closest('[data-route], [data-action], [data-category], [data-need], [data-point]');
     if (!target) return;
 
@@ -92,6 +100,22 @@ function bindGlobalEvents() {
     if (target.dataset.need) openNeed(target.dataset.need);
     if (target.dataset.point) openPoint(target.dataset.point);
     if (target.dataset.action) handleAction(target.dataset.action, target);
+  });
+
+  document.addEventListener('submit', (event) => {
+    if (!(event.target instanceof HTMLFormElement)) return;
+    if (event.target.id === 'report-form') {
+      event.preventDefault();
+      submitReport();
+    }
+    if (event.target.id === 'point-form') {
+      event.preventDefault();
+      submitPoint();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modalRoot.childElementCount) closeModal();
   });
 
   document.addEventListener('input', (event) => {
@@ -401,6 +425,8 @@ function handleAction(action, target) {
     'close-modal': closeModal,
     'submit-report': submitReport,
     'submit-point': submitPoint,
+    'copy-generated': copyGeneratedRequest,
+    'share-generated': shareGeneratedRequest,
     'contact-coordinator': () => openExternal(CONFIG.coordinatorTelegram),
   };
   handlers[action]?.();
@@ -414,7 +440,7 @@ function openNeed(id) {
   openModal(`
     <div class="modal-header">
       <div><span class="category-icon">${category.icon}</span><h2 style="margin-top:12px">${escapeHtml(item.title)}</h2></div>
-      <button class="modal-close" data-action="close-modal" aria-label="Закрити">×</button>
+      <button type="button" class="modal-close" data-action="close-modal" aria-label="Закрити">×</button>
     </div>
     <span class="status ${status.className}">${status.label}</span>
     <p class="card-description">${escapeHtml(item.description || '')}</p>
@@ -437,7 +463,7 @@ function openPoint(id) {
   openModal(`
     <div class="modal-header">
       <div><p class="eyebrow" style="margin:0 0 6px">Точка підтримки</p><h2>${escapeHtml(point.name)}</h2></div>
-      <button class="modal-close" data-action="close-modal">×</button>
+      <button type="button" class="modal-close" data-action="close-modal" aria-label="Закрити">×</button>
     </div>
     <p class="card-description">${escapeHtml(point.note || '')}</p>
     <div class="info-box"><strong>${escapeHtml(point.address || '')}</strong><br />${escapeHtml(point.city || '')}</div>
@@ -509,13 +535,13 @@ function requestLocation() {
 
 function openReportNeed() {
   openModal(`
-    <div class="modal-header"><div><p class="eyebrow" style="margin:0 0 6px">Повідомлення координаторам</p><h2>Чого не вистачає?</h2></div><button class="modal-close" data-action="close-modal">×</button></div>
+    <div class="modal-header"><div><p class="eyebrow" style="margin:0 0 6px">Повідомлення координаторам</p><h2>Чого не вистачає?</h2></div><button type="button" class="modal-close" data-action="close-modal" aria-label="Закрити">×</button></div>
     <form id="report-form" class="form-grid">
       <div class="field"><label>Місто</label><input name="city" required placeholder="Наприклад, Київ" /></div>
       <div class="field"><label>Категорія</label><select name="category">${categoryOptions()}</select></div>
       <div class="field"><label>Що саме потрібно</label><textarea name="description" required placeholder="Коротко опиши потребу, кількість і де її передати"></textarea></div>
       <div class="field"><label>Як із тобою зв’язатися</label><input name="contact" placeholder="Telegram username або контакт координатора" /><small>Не публікуй номер телефону у відкритому доступі без потреби.</small></div>
-      <button type="button" class="btn btn-primary btn-wide" data-action="submit-report">Сформувати повідомлення</button>
+      <button type="submit" class="btn btn-primary btn-wide">Сформувати запит</button>
     </form>
   `);
 }
@@ -526,19 +552,18 @@ function submitReport() {
   const data = new FormData(form);
   const category = CATEGORY[data.get('category')] || CATEGORY.other;
   const text = `Нова потреба для КАРТОНКИ\n\nМісто: ${data.get('city')}\nКатегорія: ${category.label}\nПотреба: ${data.get('description')}\nКонтакт: ${data.get('contact') || 'не вказано'}\n\nПотрібна перевірка координатором перед публікацією.`;
-  copyAndShare(text);
-  closeModal();
+  showGeneratedRequest('Запит сформовано', text);
 }
 
 function openAddPoint() {
   openModal(`
-    <div class="modal-header"><div><p class="eyebrow" style="margin:0 0 6px">Нова точка</p><h2>Запропонувати підтримку</h2></div><button class="modal-close" data-action="close-modal">×</button></div>
+    <div class="modal-header"><div><p class="eyebrow" style="margin:0 0 6px">Нова точка</p><h2>Запропонувати підтримку</h2></div><button type="button" class="modal-close" data-action="close-modal" aria-label="Закрити">×</button></div>
     <form id="point-form" class="form-grid">
       <div class="field"><label>Назва місця або організації</label><input name="name" required placeholder="Кав’ярня, офіс, волонтерська точка" /></div>
       <div class="field"><label>Місто та адреса</label><input name="address" required placeholder="Київ, вул. …" /></div>
       <div class="field"><label>Що доступно</label><textarea name="services" required placeholder="Вода, зарядка, туалет, картон…"></textarea></div>
       <div class="field"><label>Контакт</label><input name="contact" placeholder="Telegram або сайт" /></div>
-      <button type="button" class="btn btn-primary btn-wide" data-action="submit-point">Сформувати повідомлення</button>
+      <button type="submit" class="btn btn-primary btn-wide">Сформувати пропозицію</button>
     </form>
   `);
 }
@@ -548,15 +573,73 @@ function submitPoint() {
   if (!form?.reportValidity()) return;
   const data = new FormData(form);
   const text = `Нова точка підтримки для КАРТОНКИ\n\nНазва: ${data.get('name')}\nАдреса: ${data.get('address')}\nДоступно: ${data.get('services')}\nКонтакт: ${data.get('contact') || 'не вказано'}\n\nПотрібна перевірка координатором перед публікацією.`;
-  copyAndShare(text);
-  closeModal();
+  showGeneratedRequest('Пропозицію сформовано', text);
+}
+
+function showGeneratedRequest(title, text) {
+  generatedRequestText = text;
+  openModal(`
+    <div class="modal-header">
+      <div><p class="eyebrow" style="margin:0 0 6px">Готово до надсилання</p><h2>${escapeHtml(title)}</h2></div>
+      <button type="button" class="modal-close" data-action="close-modal" aria-label="Закрити">×</button>
+    </div>
+    <p class="card-description">Перевір текст. Він не публікується автоматично — ти сам обираєш, куди його надіслати.</p>
+    <textarea class="generated-request" readonly aria-label="Сформований текст">${escapeHtml(text)}</textarea>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary btn-wide" data-action="share-generated">Надіслати в Telegram</button>
+      <button type="button" class="btn btn-soft btn-wide" data-action="copy-generated">Скопіювати текст</button>
+      <button type="button" class="btn btn-soft btn-wide" data-action="close-modal">Закрити</button>
+    </div>
+  `);
+}
+
+async function copyGeneratedRequest() {
+  if (!generatedRequestText) return;
+  const copied = await copyText(generatedRequestText);
+  showToast(copied ? 'Текст скопійовано.' : 'Не вдалося скопіювати текст. Виділи його вручну.');
+}
+
+async function shareGeneratedRequest() {
+  if (!generatedRequestText) return;
+
+  const coordinator = normalizeUrl(CONFIG.coordinatorTelegram);
+  if (coordinator) {
+    await copyText(generatedRequestText);
+    showToast('Текст скопійовано. Відкриваємо контакт координаторів.');
+    openExternal(coordinator);
+    return;
+  }
+
+  openExternal(`https://t.me/share/url?url=${encodeURIComponent(getAppUrl())}&text=${encodeURIComponent(generatedRequestText)}`);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {}
+
+  try {
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.append(area);
+    area.select();
+    area.setSelectionRange(0, area.value.length);
+    const success = document.execCommand('copy');
+    area.remove();
+    return success;
+  } catch {
+    return false;
+  }
 }
 
 async function copyAndShare(text) {
   let copied = false;
   try {
-    await navigator.clipboard.writeText(text);
-    copied = true;
+    copied = await copyText(text);
   } catch {}
 
   const coordinator = normalizeUrl(CONFIG.coordinatorTelegram);
@@ -607,13 +690,14 @@ function saveActions() {
 }
 
 function openModal(content) {
-  modalRoot.innerHTML = `<div class="modal-backdrop" data-action="close-modal"><section class="modal" onclick="event.stopPropagation()">${content}</section></div>`;
+  modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true">${content}</section></div>`;
   document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
   modalRoot.innerHTML = '';
   document.body.style.overflow = '';
+  generatedRequestText = '';
 }
 
 function showToast(message) {
@@ -627,7 +711,7 @@ function skeletons(count) { return Array.from({ length: count }, () => '<div cla
 function emptyState(icon, title, text) { return `<div class="empty-state"><span class="emoji">${icon}</span><strong>${title}</strong><span>${text}</span></div>`; }
 function categoryOptions() { return Object.entries(CATEGORY).map(([key, item]) => `<option value="${key}">${item.icon} ${item.label}</option>`).join(''); }
 function getAppUrl() { return CONFIG.publicAppUrl || window.location.href.split('#')[0]; }
-function openExternal(url) { const safeUrl = normalizeUrl(url); if (!safeUrl) return showToast('Посилання поки не налаштоване.'); tg?.openLink ? tg.openLink(safeUrl) : window.open(safeUrl, '_blank', 'noopener,noreferrer'); }
+function openExternal(url) { const safeUrl = normalizeUrl(url); if (!safeUrl) return showToast('Посилання поки не налаштоване.'); const parsed = new URL(safeUrl); if ((parsed.hostname === 't.me' || parsed.protocol === 'tg:') && tg?.openTelegramLink) { tg.openTelegramLink(safeUrl); return; } tg?.openLink ? tg.openLink(safeUrl) : window.open(safeUrl, '_blank', 'noopener,noreferrer'); }
 function normalizeUrl(value='') { const text = String(value).trim(); if (!text) return ''; try { const url = new URL(text, window.location.href); return ['http:', 'https:', 'tg:'].includes(url.protocol) ? url.href : ''; } catch { return ''; } }
 function assertJson(response) { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); }
 function readLocal(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
