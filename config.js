@@ -8,8 +8,8 @@ export const CONFIG = {
 
   // Заповни після створення проєкту в Supabase: Settings → API.
   // Публічний anon key можна використовувати у браузері, якщо RLS налаштовано SQL-файлом із цього проєкту.
-  supabaseUrl: 'PASTE_SUPABASE_URL_HERE',
-  supabaseAnonKey: 'PASTE_SUPABASE_ANON_KEY_HERE',
+  supabaseUrl: 'https://fdguozstlkbtlgbgxfha.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZ3VvenN0bGtidGxnYmd4ZmhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzMzY3NzAsImV4cCI6MjA5OTkxMjc3MH0.8hMEIpas5KdO5Au2GgX7NdgAw5ozasnlgv9VRvQJM60',
   photoBucket: 'point-photos',
 
   defaultCity: 'Усі міста',
