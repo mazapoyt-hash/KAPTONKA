@@ -1,0 +1,15 @@
+{
+  "name": "КАРТОНКА — взаємодопомога",
+  "short_name": "КАРТОНКА",
+  "description": "Платформа взаємодопомоги для мирних акцій.",
+  "lang": "uk",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6fa",
+  "theme_color": "#072b63",
+  "icons": [
+    { "src": "./assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
